@@ -264,6 +264,56 @@ export function resolveOutputLimit(model) {
         : DEFAULT_OUTPUT_LIMIT;
 }
 /**
+ * Fetch the set of upstream route slugs with at least one active connection
+ * in the gateway (`GET /api/providers`, no auth required on a local gateway).
+ * Throws on network/HTTP errors so callers can fail open.
+ */
+export async function fetchActiveRouteSlugs(config) {
+    const baseUrl = config.baseUrl || OMNIROUTE_ENDPOINTS.BASE_URL;
+    const providersUrl = `${baseUrl.replace(/\/v1\/?$/, '')}/api/providers`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    try {
+        const response = await fetch(providersUrl, { signal: controller.signal });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const body = (await response.json());
+        const connections = Array.isArray(body) ? body : body.connections ?? [];
+        if (!Array.isArray(connections)) {
+            throw new Error('unexpected providers response shape');
+        }
+        const active = new Set();
+        for (const connection of connections) {
+            if (connection &&
+                typeof connection === 'object' &&
+                typeof connection.provider === 'string' &&
+                connection.isActive !== false) {
+                active.add(connection.provider);
+            }
+        }
+        return active;
+    }
+    finally {
+        clearTimeout(timeoutId);
+    }
+}
+/**
+ * Drop models whose upstream route has no active connection. Combos and the
+ * slugs in `forceKeepRoutes` always survive; models with an unknown `owned_by`
+ * are kept too. Callers should fail open (keep everything) on route-fetch errors.
+ */
+export function pruneInactiveRouteModels(models, activeRoutes, config) {
+    const forceKeep = new Set(config.forceKeepRoutes ?? []);
+    forceKeep.add('combo');
+    return models.filter((model) => {
+        const owned = model.owned_by;
+        if (!owned)
+            return true;
+        return forceKeep.has(owned) || activeRoutes.has(owned);
+    });
+}
+/**
  * Fetch models from OmniRoute /v1/models endpoint
  * This is the CRITICAL FEATURE - dynamically fetches available models
  *
@@ -330,13 +380,25 @@ export async function fetchModels(config, apiKey, forceRefresh = false) {
         const dedupedModels = deduplicateModels(visibleModels);
         const groupedModels = groupVariantModels(dedupedModels);
         const models = await enrichModelMetadata(groupedModels, config);
+        // Prune routes without active connections when requested (fail open)
+        let prunedModels = models;
+        if (config.pruneInactiveRoutes) {
+            try {
+                const activeRoutes = await fetchActiveRouteSlugs(config);
+                prunedModels = pruneInactiveRouteModels(models, activeRoutes, config);
+                debug(`Pruned ${models.length - prunedModels.length} models on inactive routes (${prunedModels.length} kept)`);
+            }
+            catch (error) {
+                debug(`Skipping route pruning, /api/providers unavailable: ${error}`);
+            }
+        }
         // Update cache
         modelCache.set(cacheKey, {
-            models,
+            models: prunedModels,
             timestamp: Date.now(),
         });
-        debug(`Successfully fetched ${models.length} models`);
-        return models;
+        debug(`Successfully fetched ${prunedModels.length} models`);
+        return prunedModels;
     }
     catch (error) {
         warn(`Error fetching models: ${error}`);

@@ -150,6 +150,8 @@ export function createRuntimeConfig(options, apiKey) {
     const modelMetadata = getModelMetadataConfig(options);
     const modelNameDisplay = getModelNameDisplay(options);
     const hideModelAliases = getHideModelAliases(options);
+    const pruneInactiveRoutes = getBoolean(options, 'pruneInactiveRoutes');
+    const forceKeepRoutes = getForceKeepRoutes(options);
     return {
         baseUrl,
         apiKey,
@@ -160,6 +162,8 @@ export function createRuntimeConfig(options, apiKey) {
         modelMetadata,
         modelNameDisplay,
         hideModelAliases,
+        pruneInactiveRoutes,
+        forceKeepRoutes,
     };
 }
 export async function readAuthFromStore(providerId) {
@@ -296,6 +300,13 @@ function getHideModelAliases(options) {
         return value;
     }
     return undefined;
+}
+function getForceKeepRoutes(options) {
+    const value = options?.forceKeepRoutes;
+    if (!Array.isArray(value))
+        return undefined;
+    const slugs = value.filter((slug) => typeof slug === 'string' && slug !== '');
+    return slugs.length > 0 ? slugs : undefined;
 }
 function getModelsDevConfig(options) {
     const raw = options?.modelsDev;

@@ -43,6 +43,18 @@ export declare function groupVariantModels(models: OmniRouteModel[]): OmniRouteM
  */
 export declare function resolveOutputLimit(model: OmniRouteModel): number;
 /**
+ * Fetch the set of upstream route slugs with at least one active connection
+ * in the gateway (`GET /api/providers`, no auth required on a local gateway).
+ * Throws on network/HTTP errors so callers can fail open.
+ */
+export declare function fetchActiveRouteSlugs(config: OmniRouteConfig): Promise<Set<string>>;
+/**
+ * Drop models whose upstream route has no active connection. Combos and the
+ * slugs in `forceKeepRoutes` always survive; models with an unknown `owned_by`
+ * are kept too. Callers should fail open (keep everything) on route-fetch errors.
+ */
+export declare function pruneInactiveRouteModels(models: OmniRouteModel[], activeRoutes: Set<string>, config: OmniRouteConfig): OmniRouteModel[];
+/**
  * Fetch models from OmniRoute /v1/models endpoint
  * This is the CRITICAL FEATURE - dynamically fetches available models
  *

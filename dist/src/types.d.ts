@@ -133,6 +133,24 @@ export interface OmniRouteConfig {
     modelNameDisplay?: 'name' | 'id' | 'prefixed';
     /** Hide alias models that have a `parent` field in `/v1/models`. */
     hideModelAliases?: boolean;
+    /**
+     * Hide `/v1/models` entries whose upstream route has no active provider
+     * connection in the gateway (`GET /api/providers`). Useful when the gateway
+     * advertises models for many built-in routes (nvidia, openrouter, ...) and
+     * only a few of them are actually configured with credentials.
+     *
+     * The model's `owned_by` field is matched against the active connection
+     * slugs; entries with `owned_by: "combo"` are always kept. When the
+     * providers list cannot be fetched, nothing is pruned (fail-open).
+     * (default: false)
+     */
+    pruneInactiveRoutes?: boolean;
+    /**
+     * Route slugs (`owned_by` values) to force-keep while pruning, additional to
+     * the always-kept `"combo"` slug. Example: `["combo", "nvidia"]` keeps the
+     * nvidia route even when no connection is active for it.
+     */
+    forceKeepRoutes?: string[];
 }
 export interface OmniRouteProviderModelModalities {
     text: boolean;

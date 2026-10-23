@@ -4,7 +4,7 @@
 
 🔌 Authentication plugin for [OpenCode](https://opencode.ai) to connect to an [OmniRoute](https://omniroute.ai) API instance.
 
-This is a fork of [Alph4d0g/opencode-omniroute-auth](https://github.com/Alph4d0g/opencode-omniroute-auth) (base: `v1.2.3`), extended with **OpenCode V2** support. Install it from npm as `@lazygatto/opencode-omniroute-auth`, or straight from this repo — the upstream npm package (`opencode-omniroute-auth@1.x`) only works on V1.
+This is a fork of [Alph4d0g/opencode-omniroute-auth](https://github.com/Alph4d0g/opencode-omniroute-auth) (base: `v1.2.3`), extended with **OpenCode V2** support by [LazyGatto](https://github.com/LazyGatto/opencode-omniroute-auth). This repo forks that V2 work and adds one feature: **inactive-route pruning** (`pruneInactiveRoutes`) so the model picker only shows models from routes that are actually configured in the gateway. Install it from npm as `@lazygatto/opencode-omniroute-auth`, or straight from this repo — the upstream npm package (`opencode-omniroute-auth@1.x`) only works on V1.
 
 ## Compatibility
 
@@ -32,6 +32,7 @@ The plugin has **no runtime dependency on the OpenCode SDK**: all SDK imports ar
 - ✅ **Subscription Provider Fallback** - Falls back to public providers for subscription-based models
 - ✅ **Model Variant Support** - Automatically strips reasoning-effort suffixes (e.g. `gpt-5.5-xhigh` → `gpt-5.5`) for lookup
 - ✅ **Reasoning Effort Tiers** - Builds variants from OmniRoute's `capabilities.effort_tiers` (e.g. Qwen3.8 → `low/medium/xhigh`) and adds a `no-thinking` variant (`chat_template_kwargs.enable_thinking=false`) for models that advertise tiers
+- ✅ **Inactive Route Pruning** - Optionally hides models from gateway routes with no active connection (this fork, off by default)
 - ✅ **Secure Logging** - Sanitized log output with async file I/O to prevent event loop blocking
 
 ## Installation
@@ -166,6 +167,8 @@ The plugin works out-of-the-box with just a base URL and a key. All options live
 | `modelMetadata` | object \| array | — | Override/add metadata for custom/virtual models (RegExp matchers work in `opencode.js`). |
 | `modelNameDisplay` | `'name' \| 'id' \| 'prefixed'` | `name` | Use model `name` (default), `id`, or provider-prefixed name in the model picker. |
 | `hideModelAliases` | boolean | `false` | Hide alias models that have a `parent` field in `/v1/models`. |
+| `pruneInactiveRoutes` | boolean | `false` | Hide models whose upstream route has no active connection in the gateway. Distinctive to this fork — see below. |
+| `forceKeepRoutes` | string[] | — | Route slugs to force-keep while pruning, in addition to `combo`. |
 
 Full V2 example:
 
@@ -180,7 +183,8 @@ Full V2 example:
         "refreshOnList": true,
         "modelCacheTtl": 300000,
         "modelNameDisplay": "name",
-        "hideModelAliases": false
+        "hideModelAliases": false,
+        "pruneInactiveRoutes": true
       }
     }
   ]
@@ -188,6 +192,37 @@ Full V2 example:
 ```
 
 On V1 the identical options block goes under `provider.omniroute.options`.
+
+### Inactive Route Pruning (this fork)
+
+OmniRoute's `/v1/models` advertises every route the gateway knows about — even
+routes you never configured, so the model picker floods with hundreds of
+non-working entries (`dva/...`, `cfp/...`, `zc/...`, the inactive halves of
+`no-think/...`, etc.).
+
+With `pruneInactiveRoutes: true`, the plugin calls the gateway's
+`GET /api/providers` and keeps only models whose `owned_by` field matches a
+route with an active connection. Combos (`owned_by: "combo"`, e.g. `auto/...`)
+are always kept, and unknown origins fail open. If the providers list can't be
+fetched, nothing is pruned — the full list shows as before.
+
+Extra control:
+
+```jsonc
+{
+  "plugins": [
+    {
+      "package": "opencode-omniroute-auth",
+      "options": {
+        "pruneInactiveRoutes": true,
+        "forceKeepRoutes": ["nvidia"]
+      }
+    }
+  ]
+}
+```
+
+`forceKeepRoutes` keeps a route even when no connection is active for it.
 
 ### Model Metadata Enrichment (models.dev)
 
@@ -487,4 +522,4 @@ MIT
 
 ## Upstream
 
-Forked from [Alph4d0g/opencode-omniroute-auth](https://github.com/Alph4d0g/opencode-omniroute-auth). Upstream fixes are merged in from time to time; V2-specific changes live in this fork.
+Forked from [Alph4d0g/opencode-omniroute-auth](https://github.com/Alph4d0g/opencode-omniroute-auth); OpenCode V2 support comes from [LazyGatto/opencode-omniroute-auth](https://github.com/LazyGatto/opencode-omniroute-auth). Both are MIT-licensed. Upstream fixes are merged in from time to time; the V2-specific changes and the inactive-route pruning feature live in this fork.

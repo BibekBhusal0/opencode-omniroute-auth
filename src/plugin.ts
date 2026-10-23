@@ -242,6 +242,8 @@ export function createRuntimeConfig(
   const modelMetadata = getModelMetadataConfig(options);
   const modelNameDisplay = getModelNameDisplay(options);
   const hideModelAliases = getHideModelAliases(options);
+  const pruneInactiveRoutes = getBoolean(options, 'pruneInactiveRoutes');
+  const forceKeepRoutes = getForceKeepRoutes(options);
 
   return {
     baseUrl,
@@ -253,6 +255,8 @@ export function createRuntimeConfig(
     modelMetadata,
     modelNameDisplay,
     hideModelAliases,
+    pruneInactiveRoutes,
+    forceKeepRoutes,
   };
 }
 
@@ -420,6 +424,13 @@ function getHideModelAliases(options: Record<string, unknown> | undefined): bool
     return value;
   }
   return undefined;
+}
+
+function getForceKeepRoutes(options: Record<string, unknown> | undefined): string[] | undefined {
+  const value = options?.forceKeepRoutes;
+  if (!Array.isArray(value)) return undefined;
+  const slugs = value.filter((slug): slug is string => typeof slug === 'string' && slug !== '');
+  return slugs.length > 0 ? slugs : undefined;
 }
 
 function getModelsDevConfig(options: Record<string, unknown> | undefined): OmniRouteModelsDevConfig | undefined {
