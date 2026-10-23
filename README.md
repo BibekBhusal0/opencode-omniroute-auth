@@ -454,7 +454,7 @@ const capabilities = await calculateModelCapabilities(model, config, modelsDevIn
 npm install
 
 # Build
-npm run build
+npm run compile
 
 # Watch mode
 npm run dev
@@ -466,7 +466,7 @@ npm run clean
 npm test
 ```
 
-`dist/` is committed to the repo: pnpm 10+ refuses to run build scripts for git-hosted packages unless they are allowlisted, so git installs must ship prebuilt output. After any source change, run `npm run build && git add dist` before committing.
+`dist/` is committed to the repo: pnpm 10+ refuses to run build scripts for git-hosted packages unless they are allowlisted, so git installs must ship prebuilt output. After any source change, run `npm run compile && git add dist` before committing. The build script is named `compile` (not `build`): npm's git dependency preparation runs whenever the package exposes `build`/`prepare`/`prepack` scripts, which would make plain git installs try `tsc` in a fresh environment and break install-from-github.
 
 ### Publishing to npm
 

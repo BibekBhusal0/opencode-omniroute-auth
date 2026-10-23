@@ -10,7 +10,7 @@ This file provides guidelines to AI agents when working with code in this reposi
 
 ```bash
 # Build (required before running tests)
-npm run build
+npm run compile
 
 # Watch mode during development
 npm run dev
@@ -19,7 +19,7 @@ npm run dev
 npm test
 
 # Run a single test file
-npm run build && node --test test/plugin.test.mjs
+npm run compile && node --test test/plugin.test.mjs
 
 # Type-check a single file without emitting
 npx tsc --noEmit src/plugin.ts
@@ -138,7 +138,7 @@ try {
 - `index.ts`: Main exports.
 
 ## Common Tasks
-- **Adding Exports**: Add in source file, re-export in `index.ts` (with `.js`), run `npm run build`.
+- **Adding Exports**: Add in source file, re-export in `index.ts` (with `.js`), run `npm run compile`.
 - **Debugging**: Look for `[OmniRoute]` prefix in console logs.
 
 ## Release Process
