@@ -623,21 +623,7 @@ function applyModelsDevMetadata(
   ];
 
   const best = lookupModelsDevModel(index, providerCandidates, candidates);
-
-  // `release_date` is provider-independent for a given model id, but the full
-  // metadata lookup skips ids that appear under several providers (aggregator
-  // routes such as antigravity). Resolve it from the globally consistent value
-  // so those models still get a real release date.
-  const globalReleaseDate = lookupGlobalReleaseDate(index, candidates);
-  const releaseDate = best?.release_date ?? globalReleaseDate;
-
-  if (!best) {
-    if (releaseDate === undefined) return model;
-    return {
-      ...model,
-      ...(model.releaseDate === undefined ? { releaseDate } : {}),
-    };
-  }
+  if (!best) return model;
 
   // Merge capabilities (only fill in missing values)
   return {
@@ -665,9 +651,6 @@ function applyModelsDevMetadata(
       : {}),
     ...(model.supportsAttachment === undefined && best.attachment !== undefined
       ? { supportsAttachment: best.attachment }
-      : {}),
-    ...(model.releaseDate === undefined && releaseDate !== undefined
-      ? { releaseDate }
       : {}),
   };
 }
@@ -726,37 +709,5 @@ function lookupModelsDevModel(
   }
 
   return undefined;
-}
-
-/**
- * Resolve a release date that does not depend on the serving provider.
- * Uses it only when every global match agrees, so aggregator routes can enrich
- * the date without picking metadata from an arbitrary provider.
- */
-function lookupGlobalReleaseDate(
-  index: ModelsDevIndex,
-  candidates: string[],
-): string | undefined {
-  for (const candidate of candidates) {
-    const exact = index.exactGlobal.get(candidate);
-    const matches =
-      exact && exact.length > 0
-        ? exact
-        : index.normalizedGlobal.get(normalizeModelKey(candidate));
-    if (!matches?.length) continue;
-
-    const releaseDate = agreedValue(matches.map((model) => model.release_date));
-    if (releaseDate !== undefined) return releaseDate;
-  }
-
-  return undefined;
-}
-
-function agreedValue(values: Array<string | undefined>): string | undefined {
-  const defined = values.filter((value): value is string => value !== undefined && value !== '');
-  if (defined.length === 0) return undefined;
-
-  const [first] = defined;
-  return defined.every((value) => value === first) ? first : undefined;
 }
 

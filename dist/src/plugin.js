@@ -775,7 +775,7 @@ function toProviderModel(model, baseUrl, providerNpm, modelNameDisplay) {
         name: formatModelDisplayName(model.id, model.name || model.id, modelNameDisplay),
         providerID: OMNIROUTE_PROVIDER_ID,
         family: getModelFamily(model.id),
-        release_date: model.releaseDate ?? '',
+        release_date: '',
         attachment: supportsAttachment,
         reasoning: supportsReasoning,
         temperature: supportsTemperature,

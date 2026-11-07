@@ -8,7 +8,7 @@ import {
   isCacheValid,
   refreshModels,
 } from '../dist/runtime.js';
-import { calculateLowestCommonCapabilities, modelsDevToMetadata } from '../dist/src/models-dev.js';
+import { calculateLowestCommonCapabilities } from '../dist/src/models-dev.js';
 import { groupVariantModels } from '../dist/src/models.js';
 
 const ORIGINAL_FETCH = global.fetch;
@@ -413,15 +413,4 @@ test('deduplication keeps alias when canonical is missing', async () => {
 
   assert.equal(models.length, 1, 'Should keep single model');
   assert.equal(models[0].id, 'ollama-cloud/deepseek-v4', 'Should normalize to canonical ID');
-});
-
-test('modelsDevToMetadata carries the release date', () => {
-  const metadata = modelsDevToMetadata({
-    id: 'gemini-3.7-flash',
-    name: 'Gemini 3.7 Flash',
-    family: 'gemini-flash',
-    release_date: '2026-08-13',
-  });
-
-  assert.equal(metadata.releaseDate, '2026-08-13');
 });

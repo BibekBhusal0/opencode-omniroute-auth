@@ -271,9 +271,6 @@ export function modelsDevToMetadata(model) {
     if (model.tool_call === true) {
         metadata.supportsTools = true;
     }
-    if (model.release_date) {
-        metadata.releaseDate = model.release_date;
-    }
     // Pricing
     if (model.cost?.input !== undefined || model.cost?.output !== undefined) {
         metadata.pricing = {};

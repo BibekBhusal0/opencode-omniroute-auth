@@ -252,19 +252,18 @@ test('toV2Model builds variants from advertised effort_tiers and adds no-thinkin
   );
 });
 
-test('toV2Model keeps each model in its own family and uses the release date', () => {
+test('toV2Model keeps each model in its own family', () => {
   const config = { baseUrl: DEAD_BASE_URL, apiKey: 'k', apiMode: 'chat' };
   const mapped = toV2Model(
     {
       id: 'google/gemini-3.7-flash-high',
       name: 'Gemini 3.7 Flash',
-      releaseDate: '2026-08-13',
     },
     config,
   );
 
   assert.equal(mapped.family, 'gemini-3.7-flash');
-  assert.deepEqual(mapped.time, { released: Date.parse('2026-08-13') });
+  assert.deepEqual(mapped.time, { released: 0 });
 });
 
 test('setup registers integration, provider, and scoped http hooks', async () => {

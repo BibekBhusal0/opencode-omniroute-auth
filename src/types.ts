@@ -47,8 +47,6 @@ export interface OmniRouteModel {
   reasoning?: boolean;
   attachment?: boolean;
   tool_call?: boolean;
-  /** models.dev release date, e.g. `2026-08-13`. */
-  releaseDate?: string;
 
   pricing?: {
     input?: number;
@@ -69,7 +67,6 @@ export interface OmniRouteModelMetadata {
   supportsTemperature?: boolean;
   supportsReasoning?: boolean;
   supportsAttachment?: boolean;
-  releaseDate?: string;
   pricing?: {
     input?: number;
     output?: number;
