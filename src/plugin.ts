@@ -938,7 +938,7 @@ export function formatModelDisplayName(
     if (!origin) {
       return baseName;
     }
-    const cleanBaseName = stripProviderPrefix(baseName);
+    const cleanBaseName = stripOriginPrefix(stripProviderPrefix(baseName), origin);
     return `${getPrettyOrigin(origin)} / ${cleanBaseName}`;
   }
   return baseName;
@@ -950,6 +950,11 @@ function getModelOrigin(modelId: string): string | undefined {
     return modelId.slice(0, slashIndex);
   }
   return undefined;
+}
+
+function stripOriginPrefix(name: string, origin: string): string {
+  const prefix = `${origin}/`;
+  return name.toLowerCase().startsWith(prefix.toLowerCase()) ? name.slice(prefix.length) : name;
 }
 
 function getPrettyOrigin(origin: string): string {

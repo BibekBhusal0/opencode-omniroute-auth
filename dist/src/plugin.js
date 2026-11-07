@@ -721,7 +721,7 @@ export function formatModelDisplayName(id, baseName, modelNameDisplay) {
         if (!origin) {
             return baseName;
         }
-        const cleanBaseName = stripProviderPrefix(baseName);
+        const cleanBaseName = stripOriginPrefix(stripProviderPrefix(baseName), origin);
         return `${getPrettyOrigin(origin)} / ${cleanBaseName}`;
     }
     return baseName;
@@ -732,6 +732,10 @@ function getModelOrigin(modelId) {
         return modelId.slice(0, slashIndex);
     }
     return undefined;
+}
+function stripOriginPrefix(name, origin) {
+    const prefix = `${origin}/`;
+    return name.toLowerCase().startsWith(prefix.toLowerCase()) ? name.slice(prefix.length) : name;
 }
 function getPrettyOrigin(origin) {
     return PROVIDER_DISPLAY_LABELS[origin] ?? origin;
