@@ -132,6 +132,16 @@ export interface V2ModelInfo {
 }
 
 /**
+ * Convert a models.dev release date (`YYYY-MM-DD`) to a millisecond timestamp.
+ * Unknown or unparseable dates yield 0, matching the previous behavior.
+ */
+function releaseTimestamp(releaseDate: string | undefined): number {
+  if (!releaseDate) return 0;
+  const parsed = Date.parse(releaseDate);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+/**
  * Convert an OmniRoute model to a V2 model definition.
  *
  * Mirrors the V1 `toProviderModel` mapping: same display-name formatting,
@@ -170,7 +180,7 @@ export function toV2Model(model: OmniRouteModel, config: OmniRouteConfig): V2Mod
       output: ['text'],
     },
     variants,
-    time: { released: 0 },
+    time: { released: releaseTimestamp(model.releaseDate) },
     cost: [
       {
         input: model.pricing?.input ?? 0,

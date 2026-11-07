@@ -3,6 +3,7 @@ import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { OMNIROUTE_PROVIDER_ID, OMNIROUTE_DEFAULT_MODELS, OMNIROUTE_ENDPOINTS, DEFAULT_CONTEXT_LIMIT, PROVIDER_ALIAS_TO_CANONICAL, PROVIDER_DISPLAY_LABELS, } from './constants.js';
 import { buildReasoningVariants, fetchModels, resolveOutputLimit, resolveProviderAliasForMetadata, } from './models.js';
+import { stripVariantSuffix } from './models-dev.js';
 import { warn, debug } from './logger.js';
 import { sanitizeForLog } from './omniroute-combos.js';
 import { isRecord, normalizeChatUsageResponse, sanitizeChatPayload } from './http-sanitize.js';
@@ -774,7 +775,7 @@ function toProviderModel(model, baseUrl, providerNpm, modelNameDisplay) {
         name: formatModelDisplayName(model.id, model.name || model.id, modelNameDisplay),
         providerID: OMNIROUTE_PROVIDER_ID,
         family: getModelFamily(model.id),
-        release_date: '',
+        release_date: model.releaseDate ?? '',
         attachment: supportsAttachment,
         reasoning: supportsReasoning,
         temperature: supportsTemperature,
@@ -831,8 +832,8 @@ function toProviderModel(model, baseUrl, providerNpm, modelNameDisplay) {
 }
 export function getModelFamily(modelId) {
     const withoutProvider = modelId.includes('/') ? modelId.split('/').pop() : modelId;
-    const [family] = withoutProvider.split('-');
-    return family || withoutProvider;
+    const { base } = stripVariantSuffix(withoutProvider);
+    return base || withoutProvider;
 }
 /**
  * Create fetch interceptor for OmniRoute API

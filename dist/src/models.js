@@ -168,6 +168,14 @@ export function isProviderAlias(providerPrefix) {
     return providerPrefix in PROVIDER_ALIAS_TO_CANONICAL;
 }
 /**
+ * Strip a trailing reasoning-effort label from a display name so a synthetic
+ * grouped base reads like the model itself rather than one of its variants.
+ */
+function variantBaseName(name) {
+    const stripped = name.replace(/[\s_-]*\(?(low|medium|high|xhigh)\)?$/i, '').trim();
+    return stripped || name;
+}
+/**
  * Group variant-suffixed models (e.g. gpt-5.5-xhigh) under their base model.
  * Returns a new array where every base model with variants gets a `variants` Record.
  */
@@ -204,7 +212,7 @@ export function groupVariantModels(models) {
         // Use real base model if available; otherwise create synthetic base from first variant
         const merged = baseModel
             ? { ...baseModel }
-            : { ...variants[0].model, id: baseId, name: baseId };
+            : { ...variants[0].model, id: baseId, name: variantBaseName(variants[0].model.name || baseId) };
         // Build variants Record
         const variantsRecord = {};
         for (const { suffix } of variants) {
@@ -496,8 +504,20 @@ function applyModelsDevMetadata(model, config, index) {
             : []),
     ];
     const best = lookupModelsDevModel(index, providerCandidates, candidates);
-    if (!best)
-        return model;
+    // `release_date` is provider-independent for a given model id, but the full
+    // metadata lookup skips ids that appear under several providers (aggregator
+    // routes such as antigravity). Resolve it from the globally consistent value
+    // so those models still get a real release date.
+    const globalReleaseDate = lookupGlobalReleaseDate(index, candidates);
+    const releaseDate = best?.release_date ?? globalReleaseDate;
+    if (!best) {
+        if (releaseDate === undefined)
+            return model;
+        return {
+            ...model,
+            ...(model.releaseDate === undefined ? { releaseDate } : {}),
+        };
+    }
     // Merge capabilities (only fill in missing values)
     return {
         ...model,
@@ -524,6 +544,9 @@ function applyModelsDevMetadata(model, config, index) {
             : {}),
         ...(model.supportsAttachment === undefined && best.attachment !== undefined
             ? { supportsAttachment: best.attachment }
+            : {}),
+        ...(model.releaseDate === undefined && releaseDate !== undefined
+            ? { releaseDate }
             : {}),
     };
 }
@@ -570,5 +593,31 @@ function lookupModelsDevModel(index, providerCandidates, modelCandidates) {
             return normalizedList[0];
     }
     return undefined;
+}
+/**
+ * Resolve a release date that does not depend on the serving provider.
+ * Uses it only when every global match agrees, so aggregator routes can enrich
+ * the date without picking metadata from an arbitrary provider.
+ */
+function lookupGlobalReleaseDate(index, candidates) {
+    for (const candidate of candidates) {
+        const exact = index.exactGlobal.get(candidate);
+        const matches = exact && exact.length > 0
+            ? exact
+            : index.normalizedGlobal.get(normalizeModelKey(candidate));
+        if (!matches?.length)
+            continue;
+        const releaseDate = agreedValue(matches.map((model) => model.release_date));
+        if (releaseDate !== undefined)
+            return releaseDate;
+    }
+    return undefined;
+}
+function agreedValue(values) {
+    const defined = values.filter((value) => value !== undefined && value !== '');
+    if (defined.length === 0)
+        return undefined;
+    const [first] = defined;
+    return defined.every((value) => value === first) ? first : undefined;
 }
 //# sourceMappingURL=models.js.map

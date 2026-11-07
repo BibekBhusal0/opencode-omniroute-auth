@@ -146,7 +146,7 @@ test('toV2Model maps an OmniRoute model to the V2 Model.Info shape', () => {
   assert.equal(mapped.modelID, 'claude-sonnet-4-5');
   assert.equal(mapped.providerID, 'omniroute');
   assert.equal(mapped.name, 'Claude Sonnet 4.5');
-  assert.equal(mapped.family, 'claude');
+  assert.equal(mapped.family, 'claude-sonnet-4-5');
   assert.deepEqual(mapped.capabilities, {
     tools: true,
     input: ['text', 'image'],
@@ -250,6 +250,21 @@ test('toV2Model builds variants from advertised effort_tiers and adds no-thinkin
     generic.variants.map((variant) => variant.id),
     ['low', 'medium', 'high'],
   );
+});
+
+test('toV2Model keeps each model in its own family and uses the release date', () => {
+  const config = { baseUrl: DEAD_BASE_URL, apiKey: 'k', apiMode: 'chat' };
+  const mapped = toV2Model(
+    {
+      id: 'google/gemini-3.7-flash-high',
+      name: 'Gemini 3.7 Flash',
+      releaseDate: '2026-08-13',
+    },
+    config,
+  );
+
+  assert.equal(mapped.family, 'gemini-3.7-flash');
+  assert.deepEqual(mapped.time, { released: Date.parse('2026-08-13') });
 });
 
 test('setup registers integration, provider, and scoped http hooks', async () => {

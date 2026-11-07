@@ -25,6 +25,7 @@ import {
   resolveOutputLimit,
   resolveProviderAliasForMetadata,
 } from './models.js';
+import { stripVariantSuffix } from './models-dev.js';
 import { warn, debug } from './logger.js';
 import { sanitizeForLog } from './omniroute-combos.js';
 import { isRecord, normalizeChatUsageResponse, sanitizeChatPayload } from './http-sanitize.js';
@@ -1009,7 +1010,7 @@ function toProviderModel(
     name: formatModelDisplayName(model.id, model.name || model.id, modelNameDisplay),
     providerID: OMNIROUTE_PROVIDER_ID,
     family: getModelFamily(model.id),
-    release_date: '',
+    release_date: model.releaseDate ?? '',
     attachment: supportsAttachment,
     reasoning: supportsReasoning,
     temperature: supportsTemperature,
@@ -1067,8 +1068,8 @@ function toProviderModel(
 
 export function getModelFamily(modelId: string): string {
   const withoutProvider = modelId.includes('/') ? modelId.split('/').pop()! : modelId;
-  const [family] = withoutProvider.split('-');
-  return family || withoutProvider;
+  const { base } = stripVariantSuffix(withoutProvider);
+  return base || withoutProvider;
 }
 
 /**
