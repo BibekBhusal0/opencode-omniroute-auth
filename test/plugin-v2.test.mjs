@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import './cache-env.mjs';
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -262,7 +263,7 @@ test('toV2Model keeps each model in its own family', () => {
     config,
   );
 
-  assert.equal(mapped.family, 'gemini-3.7-flash');
+  assert.equal(mapped.family, 'google/gemini-3.7-flash');
   assert.deepEqual(mapped.time, { released: 0 });
 });
 

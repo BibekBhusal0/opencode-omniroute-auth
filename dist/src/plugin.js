@@ -835,9 +835,12 @@ function toProviderModel(model, baseUrl, providerNpm, modelNameDisplay) {
     };
 }
 export function getModelFamily(modelId) {
-    const withoutProvider = modelId.includes('/') ? modelId.split('/').pop() : modelId;
-    const { base } = stripVariantSuffix(withoutProvider);
-    return base || withoutProvider;
+    // Keep the full route, not just the last segment: `antigravity/claude-x`
+    // and `no-think/antigravity/claude-x` are distinct models, and sharing a
+    // family makes OpenCode/T3 treat one as an older release of the other.
+    const withoutPrefix = modelId.replace(/^omniroute\//, '');
+    const { base } = stripVariantSuffix(withoutPrefix);
+    return base || withoutPrefix;
 }
 /**
  * Create fetch interceptor for OmniRoute API

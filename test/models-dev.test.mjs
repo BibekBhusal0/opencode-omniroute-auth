@@ -1,6 +1,8 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import './cache-env.mjs';
+
 import {
   fetchModelsDevData,
   getModelsDevIndex,

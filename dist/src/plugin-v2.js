@@ -1,5 +1,5 @@
 import { DEFAULT_CONTEXT_LIMIT, MODEL_CACHE_TTL, OMNIROUTE_CHAT_PROVIDER_PACKAGE, OMNIROUTE_DEFAULT_MODELS, OMNIROUTE_PLUGIN_ID, OMNIROUTE_PROVIDER_ID, OMNIROUTE_RESPONSES_PROVIDER_PACKAGE, } from './constants.js';
-import { buildReasoningVariants, fetchModels, resolveOutputLimit } from './models.js';
+import { buildReasoningVariants, fetchModels, loadPersistedModels, resolveOutputLimit } from './models.js';
 import { debug, describeError, warn } from './logger.js';
 import { sanitizeForLog } from './omniroute-combos.js';
 import { applyModelMetadataOverrides, createRuntimeConfig, formatModelDisplayName, getModelFamily, readAuthFromStore, } from './plugin.js';
@@ -143,6 +143,18 @@ export async function setup(ctx) {
         apiKey: await resolveApiKey(ctx),
         models: toV2Models(OMNIROUTE_DEFAULT_MODELS, config),
     };
+    // Publish a complete catalog from the first render. Prefer the last
+    // successful fetch (across restarts); otherwise wait for one live fetch so a
+    // client snapshot taken during startup cannot capture the tiny defaults.
+    if (state.apiKey) {
+        const persisted = await loadPersistedModels(config, state.apiKey);
+        const initial = persisted && persisted.length > 0
+            ? persisted
+            : await fetchModels(config, state.apiKey, false);
+        if (initial.length > 0) {
+            state.models = toV2Models(applyModelMetadataOverrides(initial, options.modelMetadata), config);
+        }
+    }
     // 1. Integration: display name + key auth method so `/connect omniroute`
     //    offers an API key form and the credential store is addressable.
     try {

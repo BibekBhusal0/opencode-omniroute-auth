@@ -1,5 +1,12 @@
 import type { OmniRouteConfig, OmniRouteModel, OmniRouteModelVariant } from './types.js';
 /**
+ * Last successful model list, persisted across process restarts.
+ *
+ * T3 Code caches whatever list it receives, so a cold start during a brief
+ * OmniRoute outage must not replace the full catalog with the tiny defaults.
+ */
+export declare function loadPersistedModels(config: OmniRouteConfig, apiKey: string): Promise<OmniRouteModel[] | null>;
+/**
  * Build the reasoning variants for a model.
  *
  * OmniRoute advertises the real tiers in `capabilities.effort_tiers` (e.g.

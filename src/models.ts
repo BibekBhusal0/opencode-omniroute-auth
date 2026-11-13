@@ -1,3 +1,7 @@
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { homedir } from 'os';
+import { createHash } from 'crypto';
+import { dirname, join } from 'path';
 import type { OmniRouteConfig, OmniRouteModel, OmniRouteModelVariant, OmniRouteModelsResponse } from './types.js';
 import {
   DEFAULT_OUTPUT_LIMIT,
@@ -47,7 +51,62 @@ function getCacheKey(config: OmniRouteConfig, apiKey: string): string {
       })
     : '';
 
-  return `${baseUrl}:${apiKey}:${modelsDevHash}`;
+  // Model shape depends on these filters, so they belong in the key too.
+  const filterHash = JSON.stringify({
+    pruneInactiveRoutes: config.pruneInactiveRoutes === true,
+    hideModelAliases: config.hideModelAliases === true,
+    forceKeepRoutes: config.forceKeepRoutes ?? [],
+  });
+
+  return `${baseUrl}:${apiKey}:${modelsDevHash}:${filterHash}`;
+}
+
+const PERSISTED_CACHE_VERSION = 1;
+
+function getPersistedCachePath(config: OmniRouteConfig, apiKey: string): string {
+  const hash = createHash('sha256').update(getCacheKey(config, apiKey)).digest('hex').slice(0, 16);
+  const cacheHome = process.env.XDG_CACHE_HOME || join(homedir(), '.cache');
+  return join(cacheHome, 'opencode', 'omniroute-auth', `${hash}.json`);
+}
+
+/**
+ * Last successful model list, persisted across process restarts.
+ *
+ * T3 Code caches whatever list it receives, so a cold start during a brief
+ * OmniRoute outage must not replace the full catalog with the tiny defaults.
+ */
+export async function loadPersistedModels(
+  config: OmniRouteConfig,
+  apiKey: string,
+): Promise<OmniRouteModel[] | null> {
+  try {
+    const raw = await readFile(getPersistedCachePath(config, apiKey), 'utf8');
+    const parsed = JSON.parse(raw) as { version?: number; models?: unknown };
+    if (parsed.version !== PERSISTED_CACHE_VERSION || !Array.isArray(parsed.models)) {
+      return null;
+    }
+    return parsed.models as OmniRouteModel[];
+  } catch {
+    return null;
+  }
+}
+
+async function persistModels(
+  config: OmniRouteConfig,
+  apiKey: string,
+  models: OmniRouteModel[],
+): Promise<void> {
+  try {
+    const file = getPersistedCachePath(config, apiKey);
+    await mkdir(dirname(file), { recursive: true });
+    await writeFile(
+      file,
+      JSON.stringify({ version: PERSISTED_CACHE_VERSION, timestamp: Date.now(), models }),
+      'utf8',
+    );
+  } catch (error) {
+    debug(`Failed to persist model cache: ${error}`);
+  }
 }
 
 /**
@@ -504,6 +563,7 @@ export async function fetchModels(
       models: prunedModels,
       timestamp: Date.now(),
     });
+    await persistModels(config, apiKey, prunedModels);
 
     debug(`Successfully fetched ${prunedModels.length} models`);
     return prunedModels;
@@ -515,6 +575,15 @@ export async function fetchModels(
     if (cached) {
       debug('Returning expired cached models as fallback');
       return cached.models;
+    }
+
+    // A cold start during a brief outage must not replace the full catalog
+    // with defaults: T3 Code caches whatever list it receives.
+    const persisted = await loadPersistedModels(config, apiKey);
+    if (persisted && persisted.length > 0) {
+      debug(`Returning ${persisted.length} persisted models as fallback`);
+      modelCache.set(cacheKey, { models: persisted, timestamp: Date.now() });
+      return persisted;
     }
 
     // Return default models as last resort

@@ -1,5 +1,6 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
+import './cache-env.mjs';
 import { clearModelCache, fetchModels } from '../dist/runtime.js';
 
 const ORIGINAL_FETCH = global.fetch;

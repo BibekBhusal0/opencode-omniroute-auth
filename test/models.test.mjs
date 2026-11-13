@@ -1,6 +1,8 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import './cache-env.mjs';
+
 import {
   clearModelCache,
   fetchModels,
@@ -413,4 +415,25 @@ test('deduplication keeps alias when canonical is missing', async () => {
 
   assert.equal(models.length, 1, 'Should keep single model');
   assert.equal(models[0].id, 'ollama-cloud/deepseek-v4', 'Should normalize to canonical ID');
+});
+test('fetchModels falls back to the persisted catalog after an outage', async () => {
+  const config = { ...CONFIG, apiKey: 'persisted-key', modelCacheTtl: 1 };
+
+  global.fetch = async () =>
+    new Response(
+      JSON.stringify({ object: 'list', data: [{ id: 'vendor/persisted', name: 'Persisted' }] }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+
+  const fetched = await fetchModels(config, config.apiKey, true);
+  assert.equal(fetched.length, 1);
+  clearModelCache(config, config.apiKey);
+
+  global.fetch = async () => {
+    throw new Error('simulated outage');
+  };
+
+  const fallback = await fetchModels(config, config.apiKey, true);
+  assert.equal(fallback.length, 1);
+  assert.equal(fallback[0].id, 'vendor/persisted');
 });
